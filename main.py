@@ -1,3 +1,5 @@
+import threading
+
 import pytz
 import sqlite3
 import telebot
@@ -6,12 +8,10 @@ import schedule
 from datetime import datetime
 from time import sleep
 
-
 bot = telebot.TeleBot('5620571226:AAHdC64gER17Xy054c94954Oor4eMDw8PJ0')
 conn = sqlite3.connect('notify_bot.db', check_same_thread=False)
 conn.row_factory = lambda cursor, row: row[0]
 cursor = conn.cursor()
-
 
 bot_greeting = 'Привет я бот Hook Production для уведомлений об оплате налога'
 
@@ -76,14 +76,25 @@ def auto_send_message():
                 bot.send_message(chat_id=user, text='Пожалуйста оплатите налог')
 
 
-# bot.polling(none_stop=True)
+# schedule.every().day().at('17:00').do(auto_send_message)
 
-schedule.every(1).seconds.do(auto_send_message)
-# schedule.every().day().do(auto_send_message)
+def run_bot():
+    bot.polling(none_stop=True, interval=0)
 
-while True:
-    schedule.run_pending()
-    sleep(1)
+
+def run_scheduler():
+    schedule.every(1).seconds.do(auto_send_message)
+
+    while True:
+        schedule.run_pending()
+        sleep(1)
+
+
+if __name__ == '__main__':
+    task_1 = threading.Thread(target=run_bot)
+    task_2 = threading.Thread(target=run_scheduler)
+    task_1.start()
+    task_2.start()
 
 # schedule.every(1).minutes.do(auto_send_message)
 # schedule.every().day.at('18:00').do(send_message)
