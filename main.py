@@ -65,6 +65,17 @@ def second_date(message):
     bot.send_message(message.chat.id, text='Вторая дата изменена')
 
 
+@bot.message_handler(commands=['get_all_users'])
+def all_users(message):
+    text = ''
+    users = cursor.execute('SELECT user_id FROM notify_user').fetchall()
+    for user in users:
+        text += f'<b>Юзернейм: {user.username}</b>\n' \
+                f'<b>Сообщение {user.message}</b>\n' \
+                f'<b>ID юзера: {user.user_id}</b>\n'
+    bot.send_message(message.chat.id, text=text, parse_mode='HTML')
+
+
 def auto_send_message():
     users = cursor.execute('SELECT user_id FROM notify_user').fetchall()
     exist_date_1 = cursor.execute('SELECT date_1 FROM notify_date').fetchone()
@@ -83,7 +94,7 @@ def run_bot():
 
 
 def run_scheduler():
-    schedule.every().day.at('18:37').do(auto_send_message)
+    schedule.every().day.at('16:00').do(auto_send_message)
 
     while True:
         schedule.run_pending()
