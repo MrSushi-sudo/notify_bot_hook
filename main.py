@@ -83,7 +83,7 @@ def run_bot():
 
 
 def run_scheduler():
-    schedule.every(1).seconds.do(auto_send_message)
+    schedule.every().day.at('18:37').do(auto_send_message)
 
     while True:
         schedule.run_pending()
