@@ -1,5 +1,7 @@
+import os
 import pathlib
 import threading
+import environ
 import pytz
 import sqlite3
 import telebot
@@ -12,6 +14,9 @@ bot = telebot.TeleBot('5620571226:AAHdC64gER17Xy054c94954Oor4eMDw8PJ0')
 conn = sqlite3.connect('notify_bot.db', check_same_thread=False)
 conn.row_factory = lambda cursor, row: row[0]
 cursor = conn.cursor()
+
+env = environ.Env()
+environ.Env.read_env(os.path.join('notify_bot_hook/.env'))
 
 bot_greeting = 'Привет я бот Hook Production для уведомлений об оплате налога'
 
@@ -121,8 +126,8 @@ def load_check(message):
 
 
 def send_to_office_manager(message, filename):
-    bot.send_message(399169196, f'Фото чека от @{message.chat.username} за {datetime.now(pytz.utc).strftime("%d %B %Y")}:')
-    bot.send_photo(399169196, filename, 'rb')
+    bot.send_message(env('OFFICE_MANAGER_ID'), f'Фото чека от @{message.chat.username} за {datetime.now(pytz.utc).strftime("%d %B %Y")}:')
+    bot.send_photo(env('OFFICE_MANAGER_ID'), filename, 'rb')
 
 
 # def run_bot():
