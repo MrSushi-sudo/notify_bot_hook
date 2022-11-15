@@ -16,8 +16,8 @@ cursor = conn.cursor()
 bot_greeting = 'Привет я бот Hook Production для уведомлений об оплате налога'
 
 
-def db_table_user(user_id: int, username: str):
-    cursor.execute('INSERT OR IGNORE INTO notify_user (user_id, username) VALUES (?, ?);', (user_id, username))
+def db_table_user(user_id: int, username: str, message: str):
+    cursor.execute('INSERT OR IGNORE INTO notify_user (user_id, username, message) VALUES (?, ?, ?);', (user_id, username, message))
     conn.commit()
 
 
@@ -68,6 +68,24 @@ def all_users(message):
     for user in users:
         text += f'<b>{user}</b>\n'
     bot.send_message(message.chat.id, text=text, parse_mode='HTML')
+
+
+@bot.message_handler(commands=['change_user_message'])
+def change_message(message):
+    send_msg = bot.send_message(message.chat.id, text='Введите юзернейм пользователя')
+    bot.register_next_step_handler(send_msg, select_user)
+
+
+def select_user(message):
+    username = message.text
+    send_msg = bot.send_message(message.chat.id, text=f'Выбран пользователь: {username}, введите сообщение:')
+    bot.register_next_step_handler(send_msg, new_message, username)
+
+
+def new_message(message, username):
+    # user_message = cursor.execute('SELECT message FROM notify_user WHERE user_id=?;', (username,)).fetchone()
+    cursor.execute('UPDATE notify_user SET message=? WHERE user_id=?;', (message.text, username))
+    bot.send_message(message.chat.id, text=f'Сообщение изменено, новое сообщение: "{message.text}"')
 
 
 def auto_send_message():
