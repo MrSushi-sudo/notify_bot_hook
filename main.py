@@ -1,5 +1,5 @@
+import os
 import threading
-
 import pytz
 import sqlite3
 import telebot
@@ -97,6 +97,22 @@ def auto_send_message():
         for user in users:
             if today == exist_date_1 or today == exist_date_2:
                 bot.send_message(chat_id=user, text='Пожалуйста оплатите налог')
+                send_msg = bot.send_message(user, text='Отправьте чек:')
+                bot.register_next_step_handler(send_msg, load_check)
+
+
+@bot.message_handler(commands=['load_check'])
+def load_check(message):
+    file_info = bot.get_file(message.document.file_id)
+    downloaded_file = bot.download_file(file_info.file_path)
+    try:
+        os.makedirs(f'media/check/{message.chat.username}')
+    except FileExistsError:
+        pass
+    filename = message.document.file_name + '-' + datetime.now(pytz.utc)
+    src = f'media/check/{message.chat.username}' + filename
+    with open(src, 'wb') as new_file:
+        new_file.write(downloaded_file)
 
 
 # def run_bot():
