@@ -120,7 +120,7 @@ def load_check(message):
     src = f'media/check/{message.chat.username}' + filename
     with open(src, 'wb') as new_file:
         new_file.write(downloaded_file)
-    bot.send_message(message.chat.id, f'Файл отправлен Алине Мельник, по всем вопросам: @melkalina')
+    bot.send_message(message.chat.id, f'Файл отправлен {env("OFFICE_MANAGER_NAME")}, по всем вопросам: {env("OFFICE_MANAGER_USERNAME")}')
     send_msg = bot.send_message(message.chat.username, text='Отправьте чек:')
     bot.register_next_step_handler(send_msg, send_to_office_manager, open(src, 'rb'))
 
