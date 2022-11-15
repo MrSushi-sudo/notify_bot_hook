@@ -1,4 +1,4 @@
-import os
+import pathlib
 import threading
 import pytz
 import sqlite3
@@ -105,14 +105,12 @@ def auto_send_message():
 def load_check(message):
     file_info = bot.get_file(message.document.file_id)
     downloaded_file = bot.download_file(file_info.file_path)
-    try:
-        os.makedirs(f'media/check/{message.chat.username}')
-    except FileExistsError:
-        pass
+    pathlib.Path(f'media/check/{message.chat.username}').mkdir(exist_ok=True)
     filename = message.document.file_name + '-' + datetime.now(pytz.utc)
     src = f'media/check/{message.chat.username}' + filename
     with open(src, 'wb') as new_file:
         new_file.write(downloaded_file)
+    bot.send_message(message.chat.id, f'Файл отправлен Алине Мельник, по всем вопросам: @melkalina')
 
 
 # def run_bot():
