@@ -41,7 +41,7 @@ def handle_start_help(message):
     chat_id = message.chat.id
     username = message.chat.username
     db_table_user(user_id=chat_id, username=username, message='Оплатите налог и вышлите чек')
-    bot.send_message(chat_id, text=bot_greeting)
+    bot.send_message(chat_id, text='Привет я бот Hook Production для уведомлений об оплате налога')
 
 
 @bot.message_handler(commands=['info'])
@@ -75,18 +75,24 @@ def second_date(message):
 
 @bot.message_handler(commands=['get_all_users'])
 def all_users(message):
-    text = ''
-    users = cursor.execute(
-        'SELECT ("ID Пользователя: " || user_id || " Никнейм: @" || username || " Сообщение: " || ifnull(message, "не задано")) FROM notify_user;').fetchall()
-    for user in users:
-        text += f'<b>{user}</b>\n'
-    bot.send_message(message.chat.id, text=text, parse_mode='HTML')
+    if message.chat.id == OFFICE_MANAGER_ID:
+        text = ''
+        users = cursor.execute(
+            'SELECT ("ID Пользователя: " || user_id || " Никнейм: @" || username || " Сообщение: " || ifnull(message, "не задано")) FROM notify_user;').fetchall()
+        for user in users:
+            text += f'<b>{user}</b>\n'
+        bot.send_message(message.chat.id, text=text, parse_mode='HTML')
+    else:
+        bot.send_message(message.chat.id, text='Эти команды доступны только администраторам')
 
 
 @bot.message_handler(commands=['change_user_message'])
 def change_message(message):
-    send_msg = bot.send_message(message.chat.id, text='Введите юзернейм пользователя')
-    bot.register_next_step_handler(send_msg, select_user)
+    if message.chat.id == OFFICE_MANAGER_ID:
+        send_msg = bot.send_message(message.chat.id, text='Введите юзернейм пользователя')
+        bot.register_next_step_handler(send_msg, select_user)
+    else:
+        bot.send_message(message.chat.id, text='Эти команды доступны только администраторам')
 
 
 def select_user(message):
@@ -124,7 +130,7 @@ def load_check(message):
     with open(src, 'wb') as new_file:
         new_file.write(downloaded_file)
     bot.send_message(message.chat.id,
-                     f'Файл отправлен {OFFICE_MANAGER_NAME}, по всем вопросам: {OFFICE_MANAGER_USERNAME}')
+                     f'Файл отправлен {OFFICE_MANAGER_NAME}, по всем вопросам: @{OFFICE_MANAGER_USERNAME}')
     send_msg = bot.send_message(message.chat.username, text='Отправьте чек:')
     bot.register_next_step_handler(send_msg, send_to_office_manager, open(src, 'rb'))
 
