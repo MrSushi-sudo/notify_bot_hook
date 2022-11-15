@@ -41,6 +41,11 @@ def handle_start_help(message):
     bot.send_message(chat_id, text=bot_greeting)
 
 
+@bot.message_handler(commands=['info'])
+def info(message):
+    bot.send_message(message.chat.id, text='Бот написан @PpaBwa, пока что работает в тестовом режиме. И я не пишу ботов, не пинайте мне больно.')
+
+
 @bot.message_handler(commands=['change_date_1', 'change_date_2'])
 def change_settings(message):
     if message.text == '/change_date_1':
