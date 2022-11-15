@@ -13,7 +13,7 @@ conn = sqlite3.connect('notify_bot.db', check_same_thread=False)
 conn.row_factory = lambda cursor, row: row[0]
 cursor = conn.cursor()
 
-OFFICE_MANAGER_ID = 399169196
+OFFICE_MANAGER_ID = 677051855
 OFFICE_MANAGER_NAME = 'Алине Мельник'
 OFFICE_MANAGER_USERNAME = '@melkalina'
 
@@ -60,7 +60,7 @@ def change_settings(message):
             send_msg = bot.send_message(message.chat.id, text='Введите вторую дату')
             bot.register_next_step_handler(send_msg, second_date)
     else:
-        bot.send_message(message.chat.id, text='Эти команды доступны только администраторам')
+        bot.send_message(message.chat.id, text='Эта команда доступна только администраторам')
 
 
 def first_date(message):
@@ -83,27 +83,35 @@ def all_users(message):
             text += f'<b>{user}</b>\n'
         bot.send_message(message.chat.id, text=text, parse_mode='HTML')
     else:
-        bot.send_message(message.chat.id, text='Эти команды доступны только администраторам')
+        bot.send_message(message.chat.id, text='Эта команда доступна только администраторам')
 
 
 @bot.message_handler(commands=['change_user_message'])
 def change_message(message):
     if message.chat.id == OFFICE_MANAGER_ID:
-        send_msg = bot.send_message(message.chat.id, text='Введите юзернейм пользователя')
+        send_msg = bot.send_message(message.chat.id, text='Введите никнейм пользователя')
         bot.register_next_step_handler(send_msg, select_user)
     else:
-        bot.send_message(message.chat.id, text='Эти команды доступны только администраторам')
+        bot.send_message(message.chat.id, text='Эта команда доступна только администраторам')
 
 
 def select_user(message):
-    username = message.text
-    send_msg = bot.send_message(message.chat.id, text=f'Выбран пользователь: {username}, введите сообщение:')
-    bot.register_next_step_handler(send_msg, new_message, username)
+    user = cursor.execute('SELECT username FROM notify_user WHERE username = ?;', (message.text,)).fetchone()
+    if message.text == '':
+        send_msg = bot.send_message(message.chat.id, text='Не введен никнейм пользователя')
+        bot.register_next_step_handler(send_msg, change_message)
+    elif not user:
+        send_msg = bot.send_message(message.chat.id, text='Пользователь не обнаружен в базе, введите никнейм ещё раз')
+        bot.register_next_step_handler(send_msg, change_message)
+    else:
+        username = message.text
+        send_msg = bot.send_message(message.chat.id, text=f'Выбран пользователь: @{username}, введите сообщение:')
+        bot.register_next_step_handler(send_msg, new_message, username)
 
 
 def new_message(message, username):
     # user_message = cursor.execute('SELECT message FROM notify_user WHERE user_id=?;', (username,)).fetchone()
-    cursor.execute('UPDATE notify_user SET message=? WHERE user_id=?;', (message.text, username))
+    cursor.execute('UPDATE notify_user SET message = ? WHERE username = ?;', (message.text, username))
     bot.send_message(message.chat.id, text=f'Сообщение изменено, новое сообщение: "{message.text}"')
 
 
