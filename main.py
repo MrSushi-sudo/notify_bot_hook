@@ -1,7 +1,5 @@
-import os
 import pathlib
 import threading
-import environ
 import pytz
 import sqlite3
 import telebot
@@ -15,14 +13,14 @@ conn = sqlite3.connect('notify_bot.db', check_same_thread=False)
 conn.row_factory = lambda cursor, row: row[0]
 cursor = conn.cursor()
 
-env = environ.Env()
-environ.Env.read_env(os.path.join('notify_bot_hook/.env'))
-
-bot_greeting = 'Привет я бот Hook Production для уведомлений об оплате налога'
+OFFICE_MANAGER_ID = 399169196
+OFFICE_MANAGER_NAME = 'Алине Мельник'
+OFFICE_MANAGER_USERNAME = '@melkalina'
 
 
 def db_table_user(user_id: int, username: str, message: str):
-    cursor.execute('INSERT OR IGNORE INTO notify_user (user_id, username, message) VALUES (?, ?, ?);', (user_id, username, message))
+    cursor.execute('INSERT OR IGNORE INTO notify_user (user_id, username, message) VALUES (?, ?, ?);',
+                   (user_id, username, message))
     conn.commit()
 
 
@@ -48,17 +46,21 @@ def handle_start_help(message):
 
 @bot.message_handler(commands=['info'])
 def info(message):
-    bot.send_message(message.chat.id, text='Бот написан @PpaBwa, пока что работает в тестовом режиме. И я не пишу ботов, не пинайте мне больно.')
+    bot.send_message(message.chat.id,
+                     text='Бот написан @PpaBwa, пока что работает в тестовом режиме. И я не пишу ботов, не пинайте мне больно.')
 
 
 @bot.message_handler(commands=['change_date_1', 'change_date_2'])
 def change_settings(message):
-    if message.text == '/change_date_1':
-        send_msg = bot.send_message(message.chat.id, text='Введите первую дату')
-        bot.register_next_step_handler(send_msg, first_date)
-    elif message.text == '/change_date_2':
-        send_msg = bot.send_message(message.chat.id, text='Введите вторую дату')
-        bot.register_next_step_handler(send_msg, second_date)
+    if message.chat.id == OFFICE_MANAGER_ID:
+        if message.text == '/change_date_1':
+            send_msg = bot.send_message(message.chat.id, text='Введите первую дату')
+            bot.register_next_step_handler(send_msg, first_date)
+        elif message.text == '/change_date_2':
+            send_msg = bot.send_message(message.chat.id, text='Введите вторую дату')
+            bot.register_next_step_handler(send_msg, second_date)
+    else:
+        bot.send_message(message.chat.id, text='Эти команды доступны только администраторам')
 
 
 def first_date(message):
@@ -74,7 +76,8 @@ def second_date(message):
 @bot.message_handler(commands=['get_all_users'])
 def all_users(message):
     text = ''
-    users = cursor.execute('SELECT ("ID Пользователя: " || user_id || " Никнейм: @" || username || " Сообщение: " || ifnull(message, "не задано")) FROM notify_user;').fetchall()
+    users = cursor.execute(
+        'SELECT ("ID Пользователя: " || user_id || " Никнейм: @" || username || " Сообщение: " || ifnull(message, "не задано")) FROM notify_user;').fetchall()
     for user in users:
         text += f'<b>{user}</b>\n'
     bot.send_message(message.chat.id, text=text, parse_mode='HTML')
@@ -120,14 +123,16 @@ def load_check(message):
     src = f'media/check/{message.chat.username}' + filename
     with open(src, 'wb') as new_file:
         new_file.write(downloaded_file)
-    bot.send_message(message.chat.id, f'Файл отправлен {env("OFFICE_MANAGER_NAME")}, по всем вопросам: {env("OFFICE_MANAGER_USERNAME")}')
+    bot.send_message(message.chat.id,
+                     f'Файл отправлен {OFFICE_MANAGER_NAME}, по всем вопросам: {OFFICE_MANAGER_USERNAME}')
     send_msg = bot.send_message(message.chat.username, text='Отправьте чек:')
     bot.register_next_step_handler(send_msg, send_to_office_manager, open(src, 'rb'))
 
 
 def send_to_office_manager(message, filename):
-    bot.send_message(env('OFFICE_MANAGER_ID'), f'Фото чека от @{message.chat.username} за {datetime.now(pytz.utc).strftime("%d %B %Y")}:')
-    bot.send_photo(env('OFFICE_MANAGER_ID'), filename, 'rb')
+    bot.send_message(OFFICE_MANAGER_ID,
+                     f'Фото чека от @{message.chat.username} за {datetime.now(pytz.utc).strftime("%d %B %Y")}:')
+    bot.send_photo(OFFICE_MANAGER_ID, filename, 'rb')
 
 
 # def run_bot():
@@ -141,7 +146,6 @@ def run_scheduler():
     while True:
         schedule.run_pending()
         sleep(1)
-
 
 # if __name__ == '__main__':
 #     task_1 = threading.Thread(target=run_bot)
