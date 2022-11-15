@@ -112,7 +112,7 @@ def load_check(message):
         new_file.write(downloaded_file)
     bot.send_message(message.chat.id, f'Файл отправлен Алине Мельник, по всем вопросам: @melkalina')
     send_msg = bot.send_message(message.chat.username, text='Отправьте чек:')
-    bot.register_next_step_handler(send_msg, send_to_office_manager, filename)
+    bot.register_next_step_handler(send_msg, send_to_office_manager, open(src, 'rb'))
 
 
 def send_to_office_manager(message, filename):
