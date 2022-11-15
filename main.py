@@ -116,7 +116,7 @@ def load_check(message):
 
 
 def send_to_office_manager(message, filename):
-    bot.send_message(399169196, f'Фото чека от @{message.chat.username}')
+    bot.send_message(399169196, f'Фото чека от @{message.chat.username}:')
     bot.send_photo(399169196, filename, 'rb')
 
 
