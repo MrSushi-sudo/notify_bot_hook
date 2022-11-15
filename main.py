@@ -106,7 +106,7 @@ def load_check(message):
     file_info = bot.get_file(message.document.file_id)
     downloaded_file = bot.download_file(file_info.file_path)
     pathlib.Path(f'media/check/{message.chat.username}').mkdir(exist_ok=True)
-    filename = message.document.file_name + '-' + datetime.now(pytz.utc)
+    filename = message.document.file_name + '-' + datetime.now(pytz.utc).strftime('%d %B %Y')
     src = f'media/check/{message.chat.username}' + filename
     with open(src, 'wb') as new_file:
         new_file.write(downloaded_file)
