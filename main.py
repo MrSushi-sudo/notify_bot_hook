@@ -99,10 +99,10 @@ def select_user(message):
     user = cursor.execute('SELECT username FROM notify_user WHERE username = ?;', (message.text,)).fetchone()
     if message.text == '':
         send_msg = bot.send_message(message.chat.id, text='Не введен никнейм пользователя')
-        bot.register_next_step_handler(send_msg, change_message)
+        bot.register_next_step_handler(send_msg, select_user)
     elif not user:
         send_msg = bot.send_message(message.chat.id, text='Пользователь не обнаружен в базе, введите никнейм ещё раз')
-        bot.register_next_step_handler(send_msg, change_message)
+        bot.register_next_step_handler(send_msg, select_user)
     else:
         username = message.text
         send_msg = bot.send_message(message.chat.id, text=f'Выбран пользователь: @{username}, введите сообщение:')
@@ -112,7 +112,7 @@ def select_user(message):
 def new_message(message, username):
     # user_message = cursor.execute('SELECT message FROM notify_user WHERE user_id=?;', (username,)).fetchone()
     cursor.execute('UPDATE notify_user SET message = ? WHERE username = ?;', (message.text, username))
-    bot.send_message(message.chat.id, text=f'Сообщение изменено, новое сообщение: "{message.text}"')
+    bot.send_message(message.chat.id, text=f'Сообщение изменено, новое сообщение пользователя @{username}: "{message.text}"')
 
 
 def auto_send_message():
