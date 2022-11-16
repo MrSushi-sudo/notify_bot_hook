@@ -1,4 +1,3 @@
-import pathlib
 import threading
 import pytz
 import sqlite3
@@ -7,6 +6,7 @@ import schedule
 
 from datetime import datetime
 from time import sleep
+from pathlib import Path
 
 bot = telebot.TeleBot('5620571226:AAHdC64gER17Xy054c94954Oor4eMDw8PJ0')
 conn = sqlite3.connect('notify_bot.db', check_same_thread=False)
@@ -64,13 +64,21 @@ def change_settings(message):
 
 
 def first_date(message):
-    db_table_date(date_1=message.text)
-    bot.send_message(message.chat.id, text='Первая дата изменена')
+    if 0 < message.text <= 31:
+        db_table_date(date_1=message.text)
+        bot.send_message(message.chat.id, text=f'Первая дата изменена на {message.text}')
+    else:
+        send_msg = bot.send_message(message.chat.id, text='Неверный формат даты, введите число (1-31 в зависимости от месяца)')
+        bot.register_next_step_handler(send_msg, first_date)
 
 
 def second_date(message):
-    db_table_date(date_2=message.text)
-    bot.send_message(message.chat.id, text='Вторая дата изменена')
+    if 0 < message.text <= 31:
+        db_table_date(date_2=message.text)
+        bot.send_message(message.chat.id, text=f'Вторая дата изменена на {message.text}')
+    else:
+        send_msg = bot.send_message(message.chat.id, text='Неверный формат даты, введите число (1-31 в зависимости от месяца)')
+        bot.register_next_step_handler(send_msg, second_date)
 
 
 @bot.message_handler(commands=['get_all_users'])
@@ -125,28 +133,32 @@ def auto_send_message():
             if today == exist_date_1 or today == exist_date_2:
                 bot.send_message(chat_id=user, text='Пожалуйста оплатите налог')
                 send_msg = bot.send_message(user, text='Отправьте чек:')
-                bot.register_next_step_handler(send_msg, load_check)
+                bot.register_next_step_handler(send_msg, check)
 
 
 @bot.message_handler(commands=['load_check'])
+def check(message):
+    send_msg = bot.send_message(message.chat.id, text='Выберите фото')
+    bot.register_next_step_handler(send_msg, load_check)
+
+
 def load_check(message):
-    file_info = bot.get_file(message.document.file_id)
+    file_info = bot.get_file(message.photo[-1].file_id)
     downloaded_file = bot.download_file(file_info.file_path)
-    pathlib.Path(f'media/check/{message.chat.username}').mkdir(exist_ok=True)
-    filename = message.document.file_name + '-' + datetime.now(pytz.utc).strftime('%d %B %Y')
-    src = f'media/check/{message.chat.username}' + filename
-    with open(src, 'wb') as new_file:
-        new_file.write(downloaded_file)
-    bot.send_message(message.chat.id,
-                     f'Файл отправлен {OFFICE_MANAGER_NAME}, по всем вопросам: @{OFFICE_MANAGER_USERNAME}')
-    send_msg = bot.send_message(message.chat.username, text='Отправьте чек:')
-    bot.register_next_step_handler(send_msg, send_to_office_manager, open(src, 'rb'))
-
-
-def send_to_office_manager(message, filename):
-    bot.send_message(OFFICE_MANAGER_ID,
-                     f'Фото чека от @{message.chat.username} за {datetime.now(pytz.utc).strftime("%d %B %Y")}:')
-    bot.send_photo(OFFICE_MANAGER_ID, filename, 'rb')
+    filename = f'Чек от {message.chat.username}' + '-' + datetime.now(pytz.utc).strftime('%d %B %Y')
+    file_exist = Path(f'media\check\{message.chat.username}\{filename}.jpg')
+    if file_exist.is_file():
+        bot.send_message(message.chat.id, text='Фото за эту дату в данном месяце уже загружено')
+    else:
+        Path(f'media\check\{message.chat.username}').mkdir(exist_ok=True)
+        src = f'media\check\{message.chat.username}\{filename}.jpg'
+        with open(src, 'wb') as new_file:
+            new_file.write(downloaded_file)
+        bot.send_message(message.chat.id,
+                         f'Файл отправлен {OFFICE_MANAGER_NAME}, по всем вопросам: {OFFICE_MANAGER_USERNAME}')
+        bot.send_message(OFFICE_MANAGER_ID,
+                         f'Фото чека от @{message.chat.username} за {datetime.now(pytz.utc).strftime("%d %B %Y")}:')
+        bot.send_photo(OFFICE_MANAGER_ID, photo=open(src, 'rb'))
 
 
 # def run_bot():
