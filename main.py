@@ -144,7 +144,6 @@ def select_user(message):
 
 
 def new_message(message, username):
-    # user_message = cursor.execute('SELECT message FROM notify_user WHERE user_id=?;', (username,)).fetchone()
     cursor.execute('UPDATE notify_user SET message = ? WHERE username = ?;', (message.text, username))
     bot.send_message(message.chat.id,
                      text=f'Сообщение изменено, новое сообщение пользователя @{username}: "{message.text}"')
@@ -176,12 +175,12 @@ def load_check(message):
         if 'JPG' in image_type or 'JPEG' in image_type or 'PNG' in image_type:
             filename = f'Чек от {message.chat.username}' + ' - ' + datetime.now(pytz.utc).strftime('%d') + ' ' + month[
                 str(datetime.now(pytz.utc).month)] + ' ' + datetime.now(pytz.utc).strftime('%Y')
-            file_exist = Path(f'media/check/{message.chat.username}/{filename}.jpg')
+            file_exist = Path(f'checks\{message.chat.username}\{filename}.jpg')
             if file_exist.is_file():
                 bot.send_message(message.chat.id, text='Фото за эту дату в данном месяце уже загружено')
             else:
-                Path(f'media/check/{message.chat.username}').mkdir(exist_ok=True)
-                src = f'media/check/{message.chat.username}/{filename}.jpg'
+                Path(f'checks\{message.chat.username}').mkdir(parents=True, exist_ok=True)
+                src = f'checks\{message.chat.username}/{filename}.jpg'
                 with open(src, 'wb') as new_file:
                     new_file.write(downloaded_file)
                 bot.send_message(message.chat.id,
