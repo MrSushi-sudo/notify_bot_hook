@@ -8,7 +8,6 @@ import magic
 from datetime import datetime
 from time import sleep
 from pathlib import Path
-
 from telebot.types import BotCommand
 
 bot = telebot.TeleBot('5620571226:AAHdC64gER17Xy054c94954Oor4eMDw8PJ0')
