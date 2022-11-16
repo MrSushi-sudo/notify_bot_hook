@@ -85,6 +85,8 @@ def first_date(message):
     if 0 < int(message.text) <= 31:
         db_table_date(date_1=message.text)
         bot.send_message(message.chat.id, text=f'Первая дата изменена на {message.text}')
+    elif message.text == '/exit':
+        bot.send_message(message.chat.id, text='Вы вышли из выполняемой команды')
     else:
         send_msg = bot.send_message(message.chat.id,
                                     text='Неверный формат даты, введите число (1-31 в зависимости от месяца)')
@@ -95,6 +97,8 @@ def second_date(message):
     if 0 < int(message.text) <= 31:
         db_table_date(date_2=message.text)
         bot.send_message(message.chat.id, text=f'Вторая дата изменена на {message.text}')
+    elif message.text == '/exit':
+        bot.send_message(message.chat.id, text='Вы вышли из выполняемой команды')
     else:
         send_msg = bot.send_message(message.chat.id,
                                     text='Неверный формат даты, введите число (1-31 в зависимости от месяца)')
