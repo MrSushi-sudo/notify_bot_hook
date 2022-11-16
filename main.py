@@ -16,7 +16,7 @@ conn.row_factory = lambda cursor, row: row[0]
 cursor = conn.cursor()
 
 stop = False
-OFFICE_MANAGER_ID = 399169196
+OFFICE_MANAGER_ID = 399169196 #677051855
 OFFICE_MANAGER_NAME = 'Алине Мельник'
 OFFICE_MANAGER_USERNAME = '@melkalina'
 
@@ -30,6 +30,7 @@ commands = [BotCommand('help', 'Помощь'), BotCommand('info', 'Информ
             BotCommand('change_date_1', 'Изменить первую дату (только для администратора)'),
             BotCommand('change_date_2', 'Изменить вторую дату (только для администратора)'),
             BotCommand('change_user_message', 'Изменить сообщение пользователя (только для администратора)'),
+            BotCommand('delete_user', 'Удалить пользователя из базы (только для администратора)'),
             BotCommand('load_check', 'Загрузить чек вручную (срабатывает автоматически после уведомления)')
             ]
 bot.set_my_commands(commands=commands)
@@ -57,7 +58,8 @@ def db_table_date(date_1=None, date_2=None):
 def handle_start_help(message):
     chat_id = message.chat.id
     username = message.chat.username
-    db_table_user(user_id=chat_id, username=username, message='Оплатите налог и вышлите чек')
+    if chat_id != OFFICE_MANAGER_ID:
+        db_table_user(user_id=chat_id, username=username, message='Оплатите налог и вышлите чек')
     bot.send_message(chat_id, text='Привет я бот Hook Production для уведомлений об оплате налога')
 
 
@@ -65,6 +67,30 @@ def handle_start_help(message):
 def info(message):
     bot.send_message(message.chat.id,
                      text='Бот написан @PpaBwa, пока что работает в тестовом режиме. И я обычно не пишу ботов, не пинайте мне больно.')
+
+
+@bot.message_handler(commands=['delete_user'])
+def delete_user(message):
+    if message.chat.id == OFFICE_MANAGER_ID:
+        send_msg = bot.send_message(message.chat.id, text='Выберите пользователя для удаления')
+        bot.register_next_step_handler(send_msg, delete_from_base)
+    else:
+        bot.send_message(message.chat.id, text='Эта команда доступна только администраторам')
+
+
+def delete_from_base(message):
+    if message.chat.id == OFFICE_MANAGER_ID:
+        user = cursor.execute('SELECT username FROM notify_user WHERE username = ?;', (message.text,)).fetchone()
+        if message.text == '/exit':
+            bot.send_message(message.chat.id, text='Вы вышли из выполняемой команды')
+        elif user:
+            cursor.execute('DELETE FROM notify_user WHERE username = ?;', (message.text,))
+            bot.send_message(message.chat.id, text=f'Пользователь {message.text} удален из базы')
+        else:
+            send_msg = bot.send_message(message.chat.id, text='Введенный пользователь не обнаружен в базе, попробуйте ещё раз')
+            bot.register_next_step_handler(send_msg, delete_from_base)
+    else:
+        bot.send_message(message.chat.id, text='Эта команда доступна только администраторам')
 
 
 @bot.message_handler(commands=['change_date_1', 'change_date_2'])
