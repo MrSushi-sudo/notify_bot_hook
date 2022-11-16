@@ -3,6 +3,7 @@ import pytz
 import sqlite3
 import telebot
 import schedule
+import magic
 
 from datetime import datetime
 from time import sleep
@@ -16,6 +17,9 @@ cursor = conn.cursor()
 OFFICE_MANAGER_ID = 677051855
 OFFICE_MANAGER_NAME = 'Алине Мельник'
 OFFICE_MANAGER_USERNAME = '@melkalina'
+
+month = {'1': 'Января', '2': 'Февраля', '3': 'Марта', '4': 'Апреля', '5': 'Мая', '6': 'Июня',
+         '7': 'Июля', '8': 'Августа', '9': 'Сентября', '10': 'Октября', '11': 'Ноября', '12': 'Декабря'}
 
 
 def db_table_user(user_id: int, username: str, message: str):
@@ -68,7 +72,8 @@ def first_date(message):
         db_table_date(date_1=message.text)
         bot.send_message(message.chat.id, text=f'Первая дата изменена на {message.text}')
     else:
-        send_msg = bot.send_message(message.chat.id, text='Неверный формат даты, введите число (1-31 в зависимости от месяца)')
+        send_msg = bot.send_message(message.chat.id,
+                                    text='Неверный формат даты, введите число (1-31 в зависимости от месяца)')
         bot.register_next_step_handler(send_msg, first_date)
 
 
@@ -77,7 +82,8 @@ def second_date(message):
         db_table_date(date_2=message.text)
         bot.send_message(message.chat.id, text=f'Вторая дата изменена на {message.text}')
     else:
-        send_msg = bot.send_message(message.chat.id, text='Неверный формат даты, введите число (1-31 в зависимости от месяца)')
+        send_msg = bot.send_message(message.chat.id,
+                                    text='Неверный формат даты, введите число (1-31 в зависимости от месяца)')
         bot.register_next_step_handler(send_msg, second_date)
 
 
@@ -120,7 +126,8 @@ def select_user(message):
 def new_message(message, username):
     # user_message = cursor.execute('SELECT message FROM notify_user WHERE user_id=?;', (username,)).fetchone()
     cursor.execute('UPDATE notify_user SET message = ? WHERE username = ?;', (message.text, username))
-    bot.send_message(message.chat.id, text=f'Сообщение изменено, новое сообщение пользователя @{username}: "{message.text}"')
+    bot.send_message(message.chat.id,
+                     text=f'Сообщение изменено, новое сообщение пользователя @{username}: "{message.text}"')
 
 
 def auto_send_message():
@@ -138,27 +145,39 @@ def auto_send_message():
 
 @bot.message_handler(commands=['load_check'])
 def check(message):
-    send_msg = bot.send_message(message.chat.id, text='Выберите фото')
+    send_msg = bot.send_message(message.chat.id, text='Загрузите фото в формате jpg или png')
     bot.register_next_step_handler(send_msg, load_check)
 
 
 def load_check(message):
-    file_info = bot.get_file(message.photo[-1].file_id)
-    downloaded_file = bot.download_file(file_info.file_path)
-    filename = f'Чек от {message.chat.username}' + '-' + datetime.now(pytz.utc).strftime('%d %B %Y')
-    file_exist = Path(f'media\check\{message.chat.username}\{filename}.jpg')
-    if file_exist.is_file():
-        bot.send_message(message.chat.id, text='Фото за эту дату в данном месяце уже загружено')
+    if message.photo:
+        file_info = bot.get_file(message.photo[-1].file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+        image_type = magic.from_buffer(downloaded_file)
+        if 'JPG' in image_type or 'JPEG' in image_type or 'PNG' in image_type:
+            filename = f'Чек от {message.chat.username}' + ' - ' + datetime.now(pytz.utc).strftime('%d') + ' ' + month[
+                str(datetime.now(pytz.utc).month)] + ' ' + datetime.now(pytz.utc).strftime('%Y')
+            file_exist = Path(f'media/check/{message.chat.username}/{filename}.jpg')
+            if file_exist.is_file():
+                bot.send_message(message.chat.id, text='Фото за эту дату в данном месяце уже загружено')
+            else:
+                Path(f'media/check/{message.chat.username}').mkdir(exist_ok=True)
+                src = f'media/check/{message.chat.username}/{filename}.jpg'
+                with open(src, 'wb') as new_file:
+                    new_file.write(downloaded_file)
+                bot.send_message(message.chat.id,
+                                 f'Файл отправлен {OFFICE_MANAGER_NAME}, по всем вопросам: {OFFICE_MANAGER_USERNAME}')
+                bot.send_message(OFFICE_MANAGER_ID,
+                                 f'Фото чека от @{message.chat.username} за {datetime.now(pytz.utc).strftime("%d")} '
+                                 f'{month[str(datetime.now(pytz.utc).month)]} {datetime.now(pytz.utc).strftime("%Y")}:')
+                bot.send_photo(OFFICE_MANAGER_ID, photo=open(src, 'rb'))
+        else:
+            send_msg = bot.send_message(message.chat.id, text='Неправильный тип файла (нужно либо jpg, либо png), попробуйте ещё раз')
+            bot.register_next_step_handler(send_msg, load_check)
     else:
-        Path(f'media\check\{message.chat.username}').mkdir(exist_ok=True)
-        src = f'media\check\{message.chat.username}\{filename}.jpg'
-        with open(src, 'wb') as new_file:
-            new_file.write(downloaded_file)
-        bot.send_message(message.chat.id,
-                         f'Файл отправлен {OFFICE_MANAGER_NAME}, по всем вопросам: {OFFICE_MANAGER_USERNAME}')
-        bot.send_message(OFFICE_MANAGER_ID,
-                         f'Фото чека от @{message.chat.username} за {datetime.now(pytz.utc).strftime("%d %B %Y")}:')
-        bot.send_photo(OFFICE_MANAGER_ID, photo=open(src, 'rb'))
+        send_msg = bot.send_message(message.chat.id,
+                                    text='Неправильный тип файла (нужно либо jpg, либо png), попробуйте ещё раз')
+        bot.register_next_step_handler(send_msg, load_check)
 
 
 # def run_bot():
