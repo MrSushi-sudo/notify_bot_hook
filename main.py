@@ -9,17 +9,31 @@ from datetime import datetime
 from time import sleep
 from pathlib import Path
 
+from telebot.types import BotCommand
+
 bot = telebot.TeleBot('5620571226:AAHdC64gER17Xy054c94954Oor4eMDw8PJ0')
 conn = sqlite3.connect('notify_bot.db', check_same_thread=False)
 conn.row_factory = lambda cursor, row: row[0]
 cursor = conn.cursor()
 
-OFFICE_MANAGER_ID = 677051855
+stop = False
+OFFICE_MANAGER_ID = 399169196
 OFFICE_MANAGER_NAME = 'Алине Мельник'
 OFFICE_MANAGER_USERNAME = '@melkalina'
 
 month = {'1': 'Января', '2': 'Февраля', '3': 'Марта', '4': 'Апреля', '5': 'Мая', '6': 'Июня',
          '7': 'Июля', '8': 'Августа', '9': 'Сентября', '10': 'Октября', '11': 'Ноября', '12': 'Декабря'}
+
+
+commands = [BotCommand('help', 'Помощь'), BotCommand('info', 'Информация'),
+            BotCommand('exit', 'Выйти из выполняемой команды'),
+            BotCommand('get_all_users', 'Вывести всех пользователей (только для администратора)'),
+            BotCommand('change_date_1', 'Изменить первую дату (только для администратора)'),
+            BotCommand('change_date_2', 'Изменить вторую дату (только для администратора)'),
+            BotCommand('change_user_message', 'Изменить сообщение пользователя (только для администратора)'),
+            BotCommand('load_check', 'Загрузить чек вручную (срабатывает автоматически после уведомления)')
+            ]
+bot.set_my_commands(commands=commands)
 
 
 def db_table_user(user_id: int, username: str, message: str):
@@ -51,7 +65,7 @@ def handle_start_help(message):
 @bot.message_handler(commands=['info'])
 def info(message):
     bot.send_message(message.chat.id,
-                     text='Бот написан @PpaBwa, пока что работает в тестовом режиме. И я не пишу ботов, не пинайте мне больно.')
+                     text='Бот написан @PpaBwa, пока что работает в тестовом режиме. И я обычно не пишу ботов, не пинайте мне больно.')
 
 
 @bot.message_handler(commands=['change_date_1', 'change_date_2'])
@@ -68,7 +82,7 @@ def change_settings(message):
 
 
 def first_date(message):
-    if 0 < message.text <= 31:
+    if 0 < int(message.text) <= 31:
         db_table_date(date_1=message.text)
         bot.send_message(message.chat.id, text=f'Первая дата изменена на {message.text}')
     else:
@@ -78,7 +92,7 @@ def first_date(message):
 
 
 def second_date(message):
-    if 0 < message.text <= 31:
+    if 0 < int(message.text) <= 31:
         db_table_date(date_2=message.text)
         bot.send_message(message.chat.id, text=f'Вторая дата изменена на {message.text}')
     else:
@@ -114,6 +128,8 @@ def select_user(message):
     if message.text == '':
         send_msg = bot.send_message(message.chat.id, text='Не введен никнейм пользователя')
         bot.register_next_step_handler(send_msg, select_user)
+    elif message.text == '/exit':
+        bot.send_message(message.chat.id, text='Вы вышли из выполняемой команды')
     elif not user:
         send_msg = bot.send_message(message.chat.id, text='Пользователь не обнаружен в базе, введите никнейм ещё раз')
         bot.register_next_step_handler(send_msg, select_user)
@@ -137,15 +153,14 @@ def auto_send_message():
     today = datetime.now(pytz.utc).day
     if exist_date_1 or exist_date_2:
         for user in users:
-            if today == exist_date_1 or today == exist_date_2:
-                bot.send_message(chat_id=user, text='Пожалуйста оплатите налог')
+            if user != OFFICE_MANAGER_ID and today == exist_date_1 or today == exist_date_2:
                 send_msg = bot.send_message(user, text='Отправьте чек:')
-                bot.register_next_step_handler(send_msg, check)
+                bot.register_next_step_handler(send_msg, load_check)
 
 
 @bot.message_handler(commands=['load_check'])
 def check(message):
-    send_msg = bot.send_message(message.chat.id, text='Загрузите фото в формате jpg или png')
+    send_msg = bot.send_message(message.chat.id, text='Загрузите фото чека в формате jpg или png')
     bot.register_next_step_handler(send_msg, load_check)
 
 
@@ -174,15 +189,16 @@ def load_check(message):
         else:
             send_msg = bot.send_message(message.chat.id, text='Неправильный тип файла (нужно либо jpg, либо png), попробуйте ещё раз')
             bot.register_next_step_handler(send_msg, load_check)
+    elif message.text == '/exit':
+        bot.send_message(message.chat.id, text='Вы вышли из выполняемой команды')
     else:
         send_msg = bot.send_message(message.chat.id,
                                     text='Неправильный тип файла (нужно либо jpg, либо png), попробуйте ещё раз')
         bot.register_next_step_handler(send_msg, load_check)
 
 
-# def run_bot():
-#     bot.polling(none_stop=True, interval=0)
-bot.polling(none_stop=True, interval=0)
+def run_bot():
+    bot.polling(none_stop=True, interval=0)
 
 
 def run_scheduler():
@@ -192,14 +208,9 @@ def run_scheduler():
         schedule.run_pending()
         sleep(1)
 
-# if __name__ == '__main__':
-#     task_1 = threading.Thread(target=run_bot)
-#     # task_2 = threading.Thread(target=run_scheduler)
-#     task_1.start()
-#     # task_2.start()
 
-# schedule.every(1).minutes.do(auto_send_message)
-# schedule.every().day.at('18:00').do(send_message)
-
-# @bot.message_handler(commands=['Изменить время'])
-# def change_time(time):
+if __name__ == '__main__':
+    task_1 = threading.Thread(target=run_bot)
+    task_2 = threading.Thread(target=run_scheduler)
+    task_1.start()
+    task_2.start()
