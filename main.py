@@ -182,6 +182,8 @@ def auto_send_message():
     if exist_date_1 or exist_date_2:
         for user in users:
             if user != OFFICE_MANAGER_ID and today == exist_date_1 or today == exist_date_2:
+                message = cursor.execute('SELECT message FROM notify_user WHERE username = ?;', (user,)).fetchone()
+                bot.send_message(user, text=message)
                 send_msg = bot.send_message(user, text='Отправьте чек:')
                 bot.register_next_step_handler(send_msg, load_check)
 
