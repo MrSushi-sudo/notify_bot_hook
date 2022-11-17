@@ -14,9 +14,9 @@ bot = telebot.TeleBot('5620571226:AAHdC64gER17Xy054c94954Oor4eMDw8PJ0')
 conn = sqlite3.connect('notify_bot.db', check_same_thread=False)
 conn.row_factory = lambda cursor, row: row[0]
 cursor = conn.cursor()
-
+#399169196
 stop = False
-OFFICE_MANAGER_ID = 399169196 #677051855
+OFFICE_MANAGER_ID = 677051855
 OFFICE_MANAGER_NAME = 'Алине Мельник'
 OFFICE_MANAGER_USERNAME = '@melkalina'
 
@@ -37,11 +37,11 @@ bot.set_my_commands(commands=commands)
 
 
 def log(message: str):
+    date = datetime.now().strftime('%d-%m-%Y %H:%M')
     print('<!------!>')
-    print(datetime.now())
-    print(message)
-    with open('file.dat', 'a+') as file:
-        file.write(f'{message} — {datetime.now()}')
+    print(f'{message} — {date}')
+    with open('bot.log', 'a+') as file:
+        file.write(f'{message} — {date}\n')
         file.close()
 
 
@@ -95,7 +95,7 @@ def delete_from_base(message):
             bot.send_message(message.chat.id, text='Вы вышли из выполняемой команды')
         elif user:
             cursor.execute('DELETE FROM notify_user WHERE username = ?;', (message.text,))
-            log(f'Пользователь {message.text} удален из базы администратором: {OFFICE_MANAGER_ID}')
+            log(f'Пользователь {message.text} удален из базы администратором: {OFFICE_MANAGER_USERNAME}')
             bot.send_message(message.chat.id, text=f'Пользователь {message.text} удален из базы')
         else:
             send_msg = bot.send_message(message.chat.id, text='Введенный пользователь не обнаружен в базе, попробуйте ещё раз')
@@ -155,7 +155,7 @@ def all_users(message):
         for user in users:
             text += f'<b>{user}</b>\n'
         bot.send_message(message.chat.id, text=text, parse_mode='HTML')
-        log(f'Выведен список пользователь, администратором: {OFFICE_MANAGER_ID}')
+        log(f'Выведен список пользователей администратором: {OFFICE_MANAGER_USERNAME}')
     else:
         bot.send_message(message.chat.id, text='Эта команда доступна только администраторам')
 
@@ -187,7 +187,7 @@ def select_user(message):
 
 def new_message(message, username):
     cursor.execute('UPDATE notify_user SET message = ? WHERE username = ?;', (message.text, username))
-    text = f'Сообщение изменено, новое сообщение пользователя @{username}: "{message.text}"'
+    text = f'Сообщение изменено администратором {OFFICE_MANAGER_USERNAME}, новое сообщение пользователя @{username}: "{message.text}"'
     log(text)
     bot.send_message(message.chat.id, text=text)
 
@@ -202,7 +202,8 @@ def auto_send_message():
             if user != OFFICE_MANAGER_ID and today == exist_date_1 or today == exist_date_2:
                 message = cursor.execute('SELECT message FROM notify_user WHERE username = ?;', (user,)).fetchone()
                 bot.send_message(user, text=message)
-                send_msg = bot.send_message(user, text='Отправьте чек:')
+                send_msg = bot.send_message(user, text='Отправьте фото чека:')
+                log(f'Уведомление для пользователя @{message.chat.username} за {datetime.now().strftime("%d-%m-%Y %H:%M")} выполнено')
                 bot.register_next_step_handler(send_msg, load_check)
 
 
@@ -238,14 +239,14 @@ def load_check(message):
                 bot.send_photo(OFFICE_MANAGER_ID, photo=open(src, 'rb'))
         else:
             send_msg = bot.send_message(message.chat.id, text='Неправильный тип файла (нужно либо jpg, либо png), попробуйте ещё раз')
-            log(f'Пользователь @{message.chat.username} пытался отправить неправильный тп файла')
+            log(f'Пользователь @{message.chat.username} пытался отправить неправильный тип файла')
             bot.register_next_step_handler(send_msg, load_check)
     elif message.text == '/exit':
         bot.send_message(message.chat.id, text='Вы вышли из выполняемой команды')
     else:
         send_msg = bot.send_message(message.chat.id,
                                     text='Неправильный тип файла (нужно либо jpg, либо png), попробуйте ещё раз')
-        log(f'Пользователь @{message.chat.username} пытался отправить неправильный тп файла')
+        log(f'Пользователь @{message.chat.username} пытался отправить неправильный тип файла')
         bot.register_next_step_handler(send_msg, load_check)
 
 
