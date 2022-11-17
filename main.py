@@ -36,6 +36,15 @@ commands = [BotCommand('help', 'Помощь'), BotCommand('info', 'Информ
 bot.set_my_commands(commands=commands)
 
 
+def log(message: str):
+    print('<!------!>')
+    print(datetime.now())
+    print(message)
+    with open('file.dat', 'a+') as file:
+        file.write(f'{message} — {datetime.now()}')
+        file.close()
+
+
 def db_table_user(user_id: int, username: str, message: str):
     cursor.execute('INSERT OR IGNORE INTO notify_user (user_id, username, message) VALUES (?, ?, ?);',
                    (user_id, username, message))
@@ -60,6 +69,7 @@ def handle_start_help(message):
     username = message.chat.username
     if chat_id != OFFICE_MANAGER_ID:
         db_table_user(user_id=chat_id, username=username, message='Оплатите налог и вышлите чек')
+        log(f'В базу добавлен пользователь @{username}')
     bot.send_message(chat_id, text='Привет я бот Hook Production для уведомлений об оплате налога')
 
 
@@ -85,9 +95,11 @@ def delete_from_base(message):
             bot.send_message(message.chat.id, text='Вы вышли из выполняемой команды')
         elif user:
             cursor.execute('DELETE FROM notify_user WHERE username = ?;', (message.text,))
+            log(f'Пользователь {message.text} удален из базы администратором: {OFFICE_MANAGER_ID}')
             bot.send_message(message.chat.id, text=f'Пользователь {message.text} удален из базы')
         else:
             send_msg = bot.send_message(message.chat.id, text='Введенный пользователь не обнаружен в базе, попробуйте ещё раз')
+            log(f'Введенный пользователь не обнаружен в базе, попробуйте ещё раз')
             bot.register_next_step_handler(send_msg, delete_from_base)
     else:
         bot.send_message(message.chat.id, text='Эта команда доступна только администраторам')
@@ -110,23 +122,27 @@ def first_date(message):
     if 0 < int(message.text) <= 31:
         db_table_date(date_1=message.text)
         bot.send_message(message.chat.id, text=f'Первая дата изменена на {message.text}')
+        log(f'Первая дата изменена на {message.text} администратором: {OFFICE_MANAGER_ID}')
     elif message.text == '/exit':
         bot.send_message(message.chat.id, text='Вы вышли из выполняемой команды')
     else:
         send_msg = bot.send_message(message.chat.id,
                                     text='Неверный формат даты, введите число (1-31 в зависимости от месяца)')
+        log('Неверно введена первая дата')
         bot.register_next_step_handler(send_msg, first_date)
 
 
 def second_date(message):
     if 0 < int(message.text) <= 31:
         db_table_date(date_2=message.text)
+        log(f'Вторая дата изменена на {message.text} администратором: {OFFICE_MANAGER_ID}')
         bot.send_message(message.chat.id, text=f'Вторая дата изменена на {message.text}')
     elif message.text == '/exit':
         bot.send_message(message.chat.id, text='Вы вышли из выполняемой команды')
     else:
         send_msg = bot.send_message(message.chat.id,
                                     text='Неверный формат даты, введите число (1-31 в зависимости от месяца)')
+        log('Неверно введена вторая дата')
         bot.register_next_step_handler(send_msg, second_date)
 
 
@@ -139,6 +155,7 @@ def all_users(message):
         for user in users:
             text += f'<b>{user}</b>\n'
         bot.send_message(message.chat.id, text=text, parse_mode='HTML')
+        log(f'Выведен список пользователь, администратором: {OFFICE_MANAGER_ID}')
     else:
         bot.send_message(message.chat.id, text='Эта команда доступна только администраторам')
 
@@ -170,8 +187,9 @@ def select_user(message):
 
 def new_message(message, username):
     cursor.execute('UPDATE notify_user SET message = ? WHERE username = ?;', (message.text, username))
-    bot.send_message(message.chat.id,
-                     text=f'Сообщение изменено, новое сообщение пользователя @{username}: "{message.text}"')
+    text = f'Сообщение изменено, новое сообщение пользователя @{username}: "{message.text}"'
+    log(text)
+    bot.send_message(message.chat.id, text=text)
 
 
 def auto_send_message():
@@ -202,12 +220,12 @@ def load_check(message):
         if 'JPG' in image_type or 'JPEG' in image_type or 'PNG' in image_type:
             filename = f'Чек от {message.chat.username}' + ' - ' + datetime.now(pytz.utc).strftime('%d') + ' ' + month[
                 str(datetime.now(pytz.utc).month)] + ' ' + datetime.now(pytz.utc).strftime('%Y')
-            file_exist = Path(f'checks\{message.chat.username}\{filename}.jpg')
+            file_exist = Path(f'checks/{message.chat.username}/{filename}.jpg')
             if file_exist.is_file():
                 bot.send_message(message.chat.id, text='Фото за эту дату в данном месяце уже загружено')
             else:
-                Path(f'checks\{message.chat.username}').mkdir(parents=True, exist_ok=True)
-                src = f'checks\{message.chat.username}/{filename}.jpg'
+                Path(f'checks/{message.chat.username}').mkdir(parents=True, exist_ok=True)
+                src = f'checks/{message.chat.username}/{filename}.jpg'
                 with open(src, 'wb') as new_file:
                     new_file.write(downloaded_file)
                 bot.send_message(message.chat.id,
@@ -215,15 +233,19 @@ def load_check(message):
                 bot.send_message(OFFICE_MANAGER_ID,
                                  f'Фото чека от @{message.chat.username} за {datetime.now(pytz.utc).strftime("%d")} '
                                  f'{month[str(datetime.now(pytz.utc).month)]} {datetime.now(pytz.utc).strftime("%Y")}:')
+                log(f'Фото чека от @{message.chat.username} за {datetime.now(pytz.utc).strftime("%d")} '
+                    f'{month[str(datetime.now(pytz.utc).month)]} {datetime.now(pytz.utc).strftime("%Y")} отправлено')
                 bot.send_photo(OFFICE_MANAGER_ID, photo=open(src, 'rb'))
         else:
             send_msg = bot.send_message(message.chat.id, text='Неправильный тип файла (нужно либо jpg, либо png), попробуйте ещё раз')
+            log(f'Пользователь @{message.chat.username} пытался отправить неправильный тп файла')
             bot.register_next_step_handler(send_msg, load_check)
     elif message.text == '/exit':
         bot.send_message(message.chat.id, text='Вы вышли из выполняемой команды')
     else:
         send_msg = bot.send_message(message.chat.id,
                                     text='Неправильный тип файла (нужно либо jpg, либо png), попробуйте ещё раз')
+        log(f'Пользователь @{message.chat.username} пытался отправить неправильный тп файла')
         bot.register_next_step_handler(send_msg, load_check)
 
 
