@@ -14,9 +14,8 @@ bot = telebot.TeleBot('5620571226:AAHdC64gER17Xy054c94954Oor4eMDw8PJ0')
 conn = sqlite3.connect('notify_bot.db', check_same_thread=False)
 conn.row_factory = lambda cursor, row: row[0]
 cursor = conn.cursor()
-#399169196
-stop = False
-OFFICE_MANAGER_ID = 677051855
+
+OFFICE_MANAGER_ID = 399169196
 OFFICE_MANAGER_NAME = 'Алине Мельник'
 OFFICE_MANAGER_USERNAME = '@melkalina'
 
